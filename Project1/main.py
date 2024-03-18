@@ -1,82 +1,171 @@
+import time
+from collections import Counter, defaultdict
+
+import matplotlib.pyplot as plt
 import numpy as np
+from typing import Callable, Any
 
 
-# Traditional matrix multiplication
-def traditional(first_matrix, second_matrix):
-    product_matrix = [[0 for _ in range(len(first_matrix))] for _ in range(len(first_matrix))]
-    for i in range(len(first_matrix)):
-        for j in range(len(first_matrix)):
-            sum = 0
-            for m in range(len(first_matrix)):
-                sum += first_matrix[i][m] * second_matrix[m][j]
-            product_matrix[i][j] = sum
-    return np.array(product_matrix)
+def measure_time(func: Callable) -> Callable:
+    def wrapper(*args: Any, **kwargs: Any) -> tuple[Any, float]:
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        measured_time = time.perf_counter() - start_time
+        print(f"{func.__name__} executed in {measured_time} s.")
+
+        return result, measured_time
+
+    return wrapper
 
 
-# Strassen recursive matrix multiplication
-def split_matrix_into_blocks(matrix, size):
-    return matrix[:size, :size], matrix[:size, size:], matrix[size:, :size], matrix[size:, size:]
+@measure_time
+def parametric_mixed_matmul(
+    A: np.ndarray, B: np.ndarray, l: int = 3
+) -> tuple[np.ndarray, Counter]:
+    counter = Counter()
+
+    def traditional_matmul(A: np.ndarray, B: np.ndarray) -> np.ndarray:
+        rows_first_matrix, cols_first_matrix = A.shape
+        cols_second_matrix = B.shape[1]
+
+        C = np.empty((rows_first_matrix, cols_second_matrix))
+
+        for i in range(rows_first_matrix):
+            for j in range(cols_second_matrix):
+                sum = 0
+                for k in range(cols_first_matrix):
+                    sum += A[i, k] * B[k, j]
+                    counter["+"] += 1
+                    counter["*"] += 1
+
+                C[i, j] = sum
+
+        return C
+
+    def strassen_matmul(A: np.ndarray, B: np.ndarray) -> np.ndarray:
+        if (n := A.shape[0]) == 1:
+            counter["*"] += 1
+            return A * B
+
+        n //= 2
+
+        A_11, A_12, A_21, A_22 = A[:n, :n], A[:n, n:], A[n:, :n], A[n:, n:]
+        B_11, B_12, B_21, B_22 = B[:n, :n], B[:n, n:], B[n:, :n], B[n:, n:]
+
+        P_1 = matmul(A_11 + A_22, B_11 + B_22)
+        P_2 = matmul(A_21 + A_22, B_11)
+        P_3 = matmul(A_11, B_12 - B_22)
+        P_4 = matmul(A_22, B_21 - B_11)
+        P_5 = matmul(A_11 + A_12, B_22)
+        P_6 = matmul(A_21 - A_11, B_11 + B_12)
+        P_7 = matmul(A_12 - A_22, B_21 + B_22)
+
+        C_11 = P_1 + P_4 - P_5 + P_7
+        C_12 = P_3 + P_5
+        C_21 = P_2 + P_4
+        C_22 = P_1 - P_2 + P_3 + P_6
+
+        counter["+"] += 18 * n**2
+
+        return np.block([[C_11, C_12], [C_21, C_22]])
+
+    def matmul(A: np.ndarray, B: np.ndarray) -> np.ndarray:
+        if np.log2(A.shape[0]) <= l:
+            return traditional_matmul(A, B)
+        else:
+            return strassen_matmul(A, B)
+
+    return matmul(A, B), counter
 
 
-def add_matrices(first_matrix, second_matrix):
-    return np.array([[first_matrix[i, j] + second_matrix[i, j] for j in range(first_matrix.shape[0])]
-            for i in range(first_matrix.shape[0])])
+def plot(y_scale: str = "linear") -> None:
+    ks = tuple(range(2, 9))
+    ls = (3, 5, 7)
+    l_plot_config = {3: ("red", "$l=3$"), 5: ("green", "$l=5$"), 7: ("blue", "$l=7$")}
+    exec_times = defaultdict(list)
+    counters = defaultdict(list)
+
+    np.random.seed(42)
+
+    for k in ks:
+        A = np.random.randint(10, size=(2**k, 2**k))
+        B = np.random.randint(10, size=(2**k, 2**k))
+
+        for l in ls:
+            (_, counter), exec_time = parametric_mixed_matmul(A, B, l)
+            exec_times[l].append(exec_time)
+            counters[l].append(counter)
+
+    _plot_exec_times(ls, ks, exec_times, l_plot_config, y_scale)
+    _plot_counters(ls, ks, counters, l_plot_config, y_scale)
 
 
-def subtract_matrices(first_matrix, second_matrix):
-    return np.array([[first_matrix[i, j] - second_matrix[i, j] for j in range(first_matrix.shape[0])]
-            for i in range(first_matrix.shape[0])])
+def _plot_exec_times(
+    ls: tuple, ks: tuple, exec_times: defaultdict, l_plot_config: dict, y_scale: str
+) -> None:
+    plt.clf()
+    plt.figure(figsize=(10, 7))
+
+    for l in ls:
+        plt.scatter(
+            ks, exec_times[l], color=l_plot_config[l][0], label=l_plot_config[l][1]
+        )
+        plt.plot(
+            ks,
+            exec_times[l],
+            linestyle="--",
+            color=l_plot_config[l][0],
+            linewidth=0.5,
+            dashes=(5, 10),
+        )
+
+    plt.legend()
+    plt.title("Matrix multiplication execution time by matrix size for different $l$")
+    plt.xticks(ks, labels=[f"{2**k} ($2^{k}$)" for k in ks])
+    plt.xlabel("Matrix size ($2^k$)")
+    plt.yscale(y_scale)
+    plt.ylabel("Time (s)")
+
+    plt.savefig(f"{y_scale}_time_scatter_plot.png")
 
 
-def strassen_recursive(first_matrix, second_matrix):
-    if first_matrix.shape[0] == 1:
-        return first_matrix * second_matrix
-    else:
-        size = first_matrix.shape[0] // 2
+def _plot_counters(
+    ls: tuple, ks: tuple, counters: defaultdict, l_plot_config: dict, y_scale: str
+) -> None:
+    plt.clf()
+    plt.figure(figsize=(10, 7))
 
-        a_11, a_12, a_21, a_22 = split_matrix_into_blocks(first_matrix, size)
-        b_11, b_12, b_21, b_22 = split_matrix_into_blocks(second_matrix, size)
+    for l in ls:
+        for op in ("+", "*"):
+            plt.scatter(
+                ks,
+                [counter[op] for counter in counters[l]],
+                color=l_plot_config[l][0],
+                marker=op,
+                label=l_plot_config[l][1],
+            )
 
-        p1 = strassen_recursive(add_matrices(a_11, a_22), add_matrices(b_11, b_22))
-        p2 = strassen_recursive(add_matrices(a_21, a_22), b_11)
-        p3 = strassen_recursive(a_11, subtract_matrices(b_12, b_22))
-        p4 = strassen_recursive(a_22, subtract_matrices(b_21, b_11))
-        p5 = strassen_recursive(add_matrices(a_11, a_12), b_22)
-        p6 = strassen_recursive(subtract_matrices(a_21, a_11), add_matrices(b_11, b_12))
-        p7 = strassen_recursive(subtract_matrices(a_12, a_22), add_matrices(b_21, b_22))
+            plt.plot(
+                ks,
+                [counter[op] for counter in counters[l]],
+                color=l_plot_config[l][0],
+                linestyle="--",
+                linewidth=0.5,
+                dashes=(5, 10),
+            )
 
-        c_11 = add_matrices(subtract_matrices(add_matrices(p1, p4), p5), p7)
-        c_12 = add_matrices(p3, p5)
-        c_21 = add_matrices(p2, p4)
-        c_22 = add_matrices(add_matrices(subtract_matrices(p1, p2), p3), p6)
+    plt.legend()
+    plt.title(
+        "Matrix multiplication number of operations by matrix size for different $l$"
+    )
+    plt.xticks(ks, labels=[f"{2**k} ($2^{k}$)" for k in ks])
+    plt.xlabel("Matrix size ($2^k$)")
+    plt.yscale(y_scale)
+    plt.ylabel("Number of operations")
 
-        product_matrix = np.zeros((2 * c_11.shape[0], 2 * c_11.shape[0]), dtype=int)
-        for i in range(c_11.shape[0]):
-            for j in range(c_11.shape[0]):
-                product_matrix[i, j] = c_11[i, j]
-                product_matrix[i, j + c_11.shape[0]] = c_12[i, j]
-                product_matrix[i + c_11.shape[0], j] = c_21[i, j]
-                product_matrix[i + c_11.shape[0], j + c_11.shape[0]] = c_22[i, j]
-        return product_matrix
-
-
-# Matrix multiplication with given condition
-def matrix_multiplication_program_2(first_matrix, second_matrix, l):
-    if k <= l:
-        return traditional(first_matrix, second_matrix)
-    else:
-        return strassen_recursive(first_matrix, second_matrix)
+    plt.savefig(f"{y_scale}_operations_counter_scatter_plot.png")
 
 
-if __name__ == '__main__':
-    k = 3
-    matrix_1 = np.random.randint(10, size=(2 ** k, 2 ** k))
-    matrix_2 = np.random.randint(10, size=(2 ** k, 2 ** k))
-
-    product_matrix_1 = traditional(matrix_1, matrix_2)
-    product_matrix_2 = strassen_recursive(matrix_1, matrix_2)
-
-    print(product_matrix_1)
-    print('\n')
-    print(product_matrix_2)
-
+if __name__ == "__main__":
+    plot(y_scale="log")
+    plot(y_scale="linear")
