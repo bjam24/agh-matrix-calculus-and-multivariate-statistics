@@ -8,10 +8,13 @@ All provided algorithms are from scratch as a result of their work after hours. 
 - recursive Strassen algorithm
 
 ## Project 2
-- 
--
--
--
+- Gauss elimination algorithm without pivoting
+
+- Gauss elimination algorithm with pivoting
+
+- LU factorization algorithm without pivoting
+
+- LU factorization algorithm with pivoting
 
 ## Project 3
 **under construction**
