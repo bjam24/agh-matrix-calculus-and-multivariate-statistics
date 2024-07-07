@@ -1,40 +1,28 @@
-# Matrix Calculus and Multivariate Statistics
-This respository contains projects made for the Matrix Calculus and Multivatiate Statistics course at the AGH UST in 2024 by 2 students (one team).
-All provided algorithms are from scratch as a result of their work after hours. Given tasks were intended to teach us how to apply mathematical solutions in Machine Learning in order to obtain faster and more efficient code performance. Below are presented topics of solved tasks.
+# Matrix Calculus and Multivariate Statistics 🧮
+Projects made for the Matrix Calculus and Multivatiate Statistics course at the AGH UST in 2024 by 2 students (me and <a href="https://github.com/cypneu">cypneu</a>).
+All provided algorithms are from scratch as a result of our work after hours. Given tasks were intended to teach us how to apply mathematical solutions in Machine Learning in order to obtain faster and more efficient code performance. 
 
-## Project 1
-- traditional matrix multiplication
+## Project 1 "Matrix Multiplication Methods Implementation"
+- traditional matrix multiplication <br>
+- recursive Strassen algorithm <br>
 
-- recursive Strassen algorithm
+## Project 2 "Gaussian Elimination and LU Factorization"
+- Gauss elimination algorithm without pivoting <br>
+- Gauss elimination algorithm with pivoting <br>
+- LU factorization algorithm without pivoting <br>
+- LU factorization algorithm with pivoting <br>
 
-## Project 2
-- Gauss elimination algorithm without pivoting
-
-- Gauss elimination algorithm with pivoting
-
-- LU factorization algorithm without pivoting
-
-- LU factorization algorithm with pivoting
-
-## Project 3
-- matrix norm ||M||1
-
-- matrix conditioning coefficient ||M||1
-
-- matrix norm ||M||2
-
-- matrix conditioning coefficient ||M||2
-
-- matrix norm ||M||p
-
-- matrix conditioning coefficient ||M||p
-
-- matrix norm ||M||∞
-
-- matrix conditioning coefficient ||M||∞
-
-- SVD of matrix M
+## Project 3 "Matrix Norm and Condition Number Calculation Tasks"
+- matrix norm ||M||1 <br>
+- matrix conditioning coefficient ||M||1 <br>
+- matrix norm ||M||2 <br>
+- matrix conditioning coefficient ||M||2 <br>
+- matrix norm ||M||p <br>
+- matrix conditioning coefficient ||M||p <br>
+- matrix norm ||M||∞ <br>
+- matrix conditioning coefficient ||M||∞ <br>
+- SVD of matrix M <br>
 
 ## Technology stack
-- Python
-- Latex
+- Python <br>
+- Latex <br>
